@@ -1,5 +1,5 @@
-Program a Word Game
-Learning Objectives
+**Program a Word Game
+**Learning Objectives
 
 Loading data files into R
 Breaking a programming challenge down into discrete steps
@@ -11,14 +11,14 @@ Working with different data structures (vectors, tabular data)
 Practicing data wrangling
 Dealing with keyboard input
 
-Wordle Puzzle Challenge
-The rules of Wordle are simple: A player has SIX tries to guess a 5-letter word that has been selected at random from a list of possible words. Guesses need to be valid 5-letter words. After each guess, a player receives feedback about how close their guess was to the word, which provides information they can use to try to solve the puzzle. This feedback lets you know whether each letter your guess is either [1] in the solution word and in the correct spot, [2] in the solution word but in the wrong position, or [3] not in the solution word. In app/browser versions of Wordle, this feedback is provided visually using colors, but that need not be the case.
+**Wordle Puzzle Challenge
+**The rules of Wordle are simple: A player has SIX tries to guess a 5-letter word that has been selected at random from a list of possible words. Guesses need to be valid 5-letter words. After each guess, a player receives feedback about how close their guess was to the word, which provides information they can use to try to solve the puzzle. This feedback lets you know whether each letter your guess is either [1] in the solution word and in the correct spot, [2] in the solution word but in the wrong position, or [3] not in the solution word. In app/browser versions of Wordle, this feedback is provided visually using colors, but that need not be the case.
 
 This week’s programming exercise is to work with a partner to get as far along as you can writing R code that allows you to play Wordle to your heart’s content using R/RStudio!
 
 The assignment and steps below were inspired by this fun blog post… but before you reference it or other online sites, try to tackle this coding exercise on your own.
 
-Preliminaries
+**Preliminaries**
 Set up a new GitHub repo in you or your partner’s GitHub workspace named “exercise-04” and clone that down to both of your computers as a new RStudio project. The instructions outlined as Method 1 in Module 6 will be helpful. Make sure that both you and your partner are collaborators on the repo and that you add me as a collaborator as well (my GitHub username is “difiore”).
 
 Go to https://github.com/difiore/ada-datasets, download the following two data files, and add them to your repo:
