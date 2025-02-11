@@ -18,4 +18,5 @@ This week’s programming exercise is to work with a partner to get as far along
 
 The assignment and steps below were inspired by this fun blog post… but before you reference it or other online sites, try to tackle this coding exercise on your own.
 
-[The following repository contains the remaining instructions]([https://difiore.github.io/ada-2025/exercise-04.html])
+The following repository contains the remaining instructions: https://difiore.github.io/ada-2025/exercise-04.html
+
