@@ -1,0 +1,228 @@
+---
+title: "wordle_expansion"
+format: html
+editor: visual
+---
+
+**Play Wordle (Expansion)**
+
+```{r}
+validate_hard_mode <- function(guess, constraints) {
+  guess_vec <- strsplit(guess, "")[[1]]
+  
+  for (pos in names(constraints$positions)) {
+    if (guess_vec[as.numeric(pos)] != constraints$positions[[pos]]) {
+      return(FALSE)
+    }
+  }
+  
+  if (!all(constraints$required %in% guess_vec)) {
+    return(FALSE)
+  }
+  
+  return(FALSE)
+}
+```
+
+*Shiny UI Components*
+
+```{r}
+library(shiny)
+library(huxtable)
+library(ggplot2)
+
+game_ui <- function(id) {
+  ns <- NS(id)
+  tagList(
+    uiOutput(ns("feedback_table")),
+    textInput(ns("guess"), "Enter your guess:"),
+    actionButton(ns("submit"), "Submit Guess"),
+    htmlOutput(ns("remaining_letters")),
+    htmlOutput(ns("game_status"))
+  )
+}
+
+stats_ui <- function(id) {
+  ns <- NS(id)
+  tagList(
+    h3("Game Statistics"),
+    huxtable(ns("stats_table")),
+    plotOutput(ns("performance_plot"))
+  )
+}
+```
+
+*Shiny Server Logic*
+
+```{r}
+game_server <- function(id, solution, valid_list, hard_mode) {
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+    
+    rv <- reactiveValues(
+      guesses = list(),
+      remaining_letters = LETTERS,
+      constraints = list(positions = list(), required = character()),
+      game_over = FALSE
+    )
+    
+    output$feedback_table <- renderUI({
+      if (length(rv$guesses) == 0) return()
+      
+      ht <- huxtable(
+        Guess = sapply(rv$guesses, `[[`, "guess"),
+        Feedback = sapply(rv$guesses, function(g) {
+          paste(g$feedback, collapse = "")
+        })
+      )
+      
+      for (i in seq_along(rv$guesses)) {
+        for (j in 1:nchar(rv$guesses[[i]]$guess)) {
+          bg_color <- case_when(
+            substr(rv$guesses[[i]]$feedback, j, j) == "*" ~ "green",
+            substr(rv$guesses[[i]]$feedback, j, j) == "+" ~ "yellow",
+            TRUE ~ "grey"
+          )
+          ht <- set_background_color(ht, i+1, j, bg_color)
+        }
+      }
+      
+      renderHux(ht)
+    })
+    
+    observeEvent(input$submit, {
+      guess <- toupper(input$guess)
+      req(nchar(guess) == length(solution))
+      
+      # Hard mode validation
+      if (hard_mode && !validate_hard_mode(guess, rv$constraints)) {
+        showModal(modalDialog(
+          title = "Invalid Guess",
+          "Your guess must use all revealed information from previous guesses!",
+          easyClose = TRUE
+        ))
+        return()
+      }
+      
+      # Update game state
+      feedback <- evaluate_guess(guess, solution)
+      rv$guesses <- c(rv$guesses, list(list(guess = guess, feedback = feedback)))
+      
+      # Update constraints for hard mode
+      if (hard_mode) {
+        for (i in seq_along(feedback)) {
+          if (feedback[i] == "*") {
+            rv$constraints$positions[[as.character(i)]] <- solution[i]
+          } else if (feedback[i] == "+") {
+            rv$constraints$required <- union(rv$constraints$required, guess[i])
+          }
+        }
+      }
+      
+      # Update remaining letters
+      rv$remaining_letters <- setdiff(rv$remaining_letters, strsplit(guess, "")[[1]])
+      
+      # Check win/lose conditions
+      if (all(feedback == "*")) {
+        rv$game_over <- TRUE
+        update_statistics(win = TRUE, attempts = length(rv$guesses))
+      } else if (length(rv$guesses) >= 6) {
+        rv$game_over <- TRUE
+        update_statistics(win = FALSE, attempts = NA)
+      }
+    })
+    
+    output$remaining_letters <- renderUI({
+      HTML(paste0("<strong>Remaining letters:</strong> ", paste(rv$remaining_letters, collapse = " ")))
+    })
+    
+    output$game_status <- renderUI({
+      if (rv$game_over) {
+        if (all(last(rv$guesses)$feedback == "*")) {
+          msg <- paste("Congratulations! You won in", length(rv$guesses), "guesses!")
+        } else {
+          msg <- paste("Game over! The solution was:", paste(solution, collapse = ""))
+        }
+        HTML(paste0("<h3>", msg, "</h3>"))
+      }
+    })
+  })
+}
+```
+
+*Main Shiny App*
+
+```{r}
+read_last_played_date <- function() {
+  if(file.exists("last_plated.txt")) {
+    as.Date(readLines("last_played.txt"))
+  } else {
+    as.Date("1970-01-01")
+  }
+}
+
+write_last_played_date <- function(win, attempts) {
+  stats <- if (file.exists("stats.csv")) {
+    read.csv("stats.csv")
+  } else {data.frame(date = as.Date(character()),
+                     win = logical(),
+                     attempts = integer())
+  }
+  
+  stats <- rbind(stats, data.frame(
+    date = Sys.Date(),
+    win = win,
+    attempts = if (win) attempts else NA
+  ))
+  
+  write.csv(stats, "stats.csv", row.names = FALSE)
+}
+```
+
+```{r}
+
+ui <- fluidPage(
+  titlePanel("Wordle Clone"),
+  sidebarLayout(
+    sidebarPanel(
+      checkboxInput("hard_mode", "Hard Mode"),
+      actionButton("new_game", "New Game"),
+      stats_ui("stats")
+    ),
+    mainPanel(
+      uiOutput("game_ui"),
+      game_ui("game")
+    )
+  )
+)
+
+server <- function(input, output, session) {
+  game_data <- reactiveValues(
+    solution = NULL,
+    last_played = read_last_played_date()
+  )
+  
+  observeEvent(input$new_game, {
+    if(as.Date(Sys.time()) <= game_data$last_played) {
+      showModal(modalDialog(
+        title = "Daily Limit",
+        "You can only play one game per day!",
+        easyClose = TRUE
+      ))
+      return()
+    }
+    
+    game_data$solution <- pick_solution(solution_list)
+    game_data$last_played <- as.Date(Sys.time())
+    write_last_played_date(game_data$last_played)
+  })
+  
+  callModule(game_server, "game",
+             solution = reactive(game_data$solution),
+             valid_list = valid_list,
+             hard_mode = reactive(input$hard_mode))
+}
+
+
+shinyApp(ui, server)
+```
