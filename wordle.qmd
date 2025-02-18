@@ -11,7 +11,6 @@ editor: visual
 ```{r}
 library(tidyverse)
 library(dplyr)
-
 ```
 
 #### Load Dictionary
@@ -79,7 +78,6 @@ evaluate_guess <- function(guess, solution) {
   }
   return(paste(result, collapse = ""))
 }
-
 ```
 
 #### Play Wordle (Base Game)
@@ -128,7 +126,5 @@ play_wordle <- function(solution, valid_list, num_guesses=6){
   print(do.call(rbind, guesses))
   return(FALSE)
 }
-
-
 ```
 

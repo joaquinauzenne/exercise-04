@@ -7,6 +7,10 @@ editor: visual
 **Play Wordle (Expansion)**
 
 ```{r}
+source("wordle.qmd")
+```
+
+```{r}
 validate_hard_mode <- function(guess, constraints) {
   guess_vec <- strsplit(guess, "")[[1]]
   
