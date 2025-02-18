@@ -1,0 +1,134 @@
+---
+title: "Wordle"
+format: html
+editor: visual
+---
+
+## Wordle Game
+
+#### Preliminaries
+
+```{r}
+library(tidyverse)
+library(dplyr)
+
+```
+
+#### Load Dictionary
+
+```{r}
+# Function to read in file and format as a list of strings in upper case
+load_dictionary <- function(filename) {
+  lines <- readLines(filename)
+  lines <- trimws(lines) |>
+    (\(x) x[x != ""])() |>
+    grep(pattern = "^#", invert = TRUE, value = TRUE) |>
+    toupper()
+}
+
+valid_list <- load_dictionary("https://raw.githubusercontent.com/difiore/ada-datasets/refs/heads/main/collins-scrabble-words-2019.txt")
+solution_list <- load_dictionary("https://raw.githubusercontent.com/difiore/ada-datasets/refs/heads/main/google-10000-english-usa-no-swears.txt")
+
+```
+
+**Pick Solution**
+
+```{r}
+solution_list <- intersect(solution_list, valid_list)
+nrow(solution_list)
+
+# Function to pick a solution from the solution list with appropriate length
+pick_solution <- function(solution_list, word_length = 5) {
+  valid_words <- solution_list[nchar(solution_list) == word_length]
+  if (length(valid_words) == 0) stop("No valid solution words...")
+  selected_word <- sample(valid_words, 1)
+  return(strsplit(selected_word, "")[[1]])
+}
+
+solution <- pick_solution(solution_list)
+solution
+```
+
+**Evaluate Guess**
+
+```{r}
+# Function to evaluate each word guessed
+evaluate_guess <- function(guess, solution) {
+  guess_vec <- toupper(strsplit(guess, "")[[1]])
+  solution_vec <- solution
+  result <- character(length(guess_vec))
+  remaining <- solution_vec
+  
+  # Exact matches
+  for (i in seq_along(guess_vec)) {
+    if (guess_vec[i] == solution_vec[i]) {
+      result[i] <- "*"
+      remaining[i] <- NA
+    }
+  }
+  
+  # Check for other letters in wrong place
+  for (i in seq_along(guess_vec)) {
+    if (result[i] != "") next
+    char <- guess_vec[i]
+    idx <- which(remaining == char)
+    if (length(idx) > 0) {
+      result[i] <- "+"
+      remaining[idx[1]] <- NA
+    } else {result[i] <- "-"} # Letters that aren't in the word at all
+  }
+  return(paste(result, collapse = ""))
+}
+
+```
+
+#### Play Wordle (Base Game)
+
+1.  At the onset, tell the player the rules of the game, e.g., "You have ... chances to guess a word of length ..."
+
+2.  Display what letters the player has not yet guessed (at the onset, this would be all 26 letters of the alphabet), e.g., "Letters left: ..."
+
+```{r}
+# Primary function to begin a Wordle game
+play_wordle <- function(solution, valid_list, num_guesses=6){
+  word_length <- length(solution)
+  remaining_letters <- LETTERS
+  guesses <- list()
+  
+  cat("Wordle: You have", num_guesses, "guesses to find the", word_length, "letter word.\n")
+  
+  for (attempt in 1:num_guesses) {
+    cat("\nLetters Remaining:", paste(remaining_letters, collapse = ""), "\n")
+    valid_guess <- FALSE
+    while (!valid_guess) {
+      guess <- toupper(readline(paste0("Guess ", attempt, "/", num_guesses, ": ")))
+      if (nchar(guess) != word_length) {
+        cat("Guess must be", word_length, "letters long.\n")
+      } else { valid_guess <- TRUE}
+    }
+    
+    # Evaluate/store guess
+    feedback <- evaluate_guess(guess, solution)
+    guesses[[attempt]] <- list(guess = guess, feedback = feedback)
+    
+    guessed_letters <- unique(strsplit(guess, "")[[1]])
+    remaining_letters <- setdiff(remaining_letters, guessed_letters)
+    
+    if (feedback == paste(rep("*", word_length), collapse = "")) {
+      cat("\nCongratulations! You guessed the word in", attempt, "tries!\n")
+      print(do.call(rbind, guesses))
+      return(TRUE)
+    }
+    
+    cat("Feedback:", feedback, "\n")
+  }
+  
+  # Game Over
+  cat("\nGame over! The solution was:", paste(solution, collapse = ""), "\n")
+  print(do.call(rbind, guesses))
+  return(FALSE)
+}
+
+
+```
+
